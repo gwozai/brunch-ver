@@ -16,6 +16,7 @@
   },
   "include": ["./types", "src/**/*"],
   "ts-node": {
+    "esm": true,
     "swc": true // https://typestrong.org/ts-node/docs/swc/
   }
 }
