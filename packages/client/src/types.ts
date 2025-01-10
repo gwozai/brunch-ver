@@ -14,8 +14,8 @@ export interface Dictionary<T> {
   [key: string]: T;
 }
 
-export const VALID_ARCHIVE_FORMATS = ['tgz'] as const;
-export type ArchiveFormat = typeof VALID_ARCHIVE_FORMATS[number];
+export const VALID_ARCHIVE_FORMATS = ['tgz', 'split-tgz'] as const;
+export type ArchiveFormat = (typeof VALID_ARCHIVE_FORMATS)[number];
 
 export interface VercelClientOptions {
   token: string;
@@ -25,6 +25,7 @@ export interface VercelClientOptions {
   apiUrl?: string;
   force?: boolean;
   prebuilt?: boolean;
+  vercelOutputDir?: string;
   rootDirectory?: string | null;
   withCache?: boolean;
   userAgent?: string;
@@ -92,6 +93,9 @@ export interface Deployment {
   alias: string[];
   aliasAssigned: boolean;
   aliasError: string | null;
+  expiration?: number;
+  proposedExpiration?: number;
+  undeletedAt?: number;
 }
 
 export interface DeploymentBuild {
@@ -194,4 +198,6 @@ export interface DeploymentOptions {
   meta?: Dictionary<string>;
   projectSettings?: ProjectSettings;
   gitMetadata?: GitMetadata;
+  autoAssignCustomDomains?: boolean;
+  customEnvironmentSlugOrId?: string;
 }

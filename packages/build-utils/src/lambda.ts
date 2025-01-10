@@ -5,20 +5,19 @@ import minimatch from 'minimatch';
 import { readlink } from 'fs-extra';
 import { isSymbolicLink, isDirectory } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
-import type { Files, Config, FunctionFramework } from './types';
-
-interface Environment {
-  [key: string]: string;
-}
+import type { Config, Env, Files, FunctionFramework } from './types';
 
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
+
+export type LambdaArchitecture = 'x86_64' | 'arm64';
 
 export interface LambdaOptionsBase {
   handler: string;
   runtime: string;
+  architecture?: LambdaArchitecture;
   memory?: number;
   maxDuration?: number;
-  environment?: Environment;
+  environment?: Env;
   allowQuery?: string[];
   regions?: string[];
   supportsMultiPayloads?: boolean;
@@ -34,6 +33,7 @@ export interface LambdaOptionsBase {
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
   files: Files;
+  experimentalAllowBundling?: boolean;
 }
 
 /**
@@ -62,9 +62,10 @@ export class Lambda {
   files?: Files;
   handler: string;
   runtime: string;
+  architecture?: LambdaArchitecture;
   memory?: number;
   maxDuration?: number;
-  environment: Environment;
+  environment: Env;
   allowQuery?: string[];
   regions?: string[];
   /**
@@ -75,12 +76,14 @@ export class Lambda {
   supportsWrapper?: boolean;
   supportsResponseStreaming?: boolean;
   framework?: FunctionFramework;
+  experimentalAllowBundling?: boolean;
 
   constructor(opts: LambdaOptions) {
     const {
       handler,
       runtime,
       maxDuration,
+      architecture,
       memory,
       environment = {},
       allowQuery,
@@ -101,6 +104,23 @@ export class Lambda {
     assert(typeof handler === 'string', '"handler" is not a string');
     assert(typeof runtime === 'string', '"runtime" is not a string');
     assert(typeof environment === 'object', '"environment" is not an object');
+
+    if (architecture !== undefined) {
+      assert(
+        architecture === 'x86_64' || architecture === 'arm64',
+        '"architecture" must be either "x86_64" or "arm64"'
+      );
+    }
+
+    if (
+      'experimentalAllowBundling' in opts &&
+      opts.experimentalAllowBundling !== undefined
+    ) {
+      assert(
+        typeof opts.experimentalAllowBundling === 'boolean',
+        '"experimentalAllowBundling" is not a boolean'
+      );
+    }
 
     if (memory !== undefined) {
       assert(typeof memory === 'number', '"memory" is not a number');
@@ -159,6 +179,7 @@ export class Lambda {
     this.files = 'files' in opts ? opts.files : undefined;
     this.handler = handler;
     this.runtime = runtime;
+    this.architecture = architecture;
     this.memory = memory;
     this.maxDuration = maxDuration;
     this.environment = environment;
@@ -170,6 +191,10 @@ export class Lambda {
     this.supportsResponseStreaming =
       supportsResponseStreaming ?? experimentalResponseStreaming;
     this.framework = framework;
+    this.experimentalAllowBundling =
+      'experimentalAllowBundling' in opts
+        ? opts.experimentalAllowBundling
+        : undefined;
   }
 
   async createZip(): Promise<Buffer> {

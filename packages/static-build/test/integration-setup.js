@@ -38,8 +38,15 @@ module.exports = function setupTests(groupIndex) {
     console.log('testing group', groupIndex, fixtures);
   }
 
+  // https://linear.app/vercel/issue/ZERO-2919/investigate-platform-errors-and-restore-skipped-tests
+  const fixturesToSkip = ['ember-v3', '53-native-gems'];
+
   // eslint-disable-next-line no-restricted-syntax
   for (const fixture of fixtures) {
+    if (fixturesToSkip.includes(fixture)) {
+      continue;
+    }
+
     const errMsg = testsThatFailToBuild.get(fixture);
     if (errMsg) {
       // eslint-disable-next-line no-loop-func

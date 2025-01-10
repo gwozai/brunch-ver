@@ -3,6 +3,22 @@ import { pathToRegexp } from 'path-to-regexp';
 import type { IncomingMessage } from 'http';
 import { extname } from 'path';
 
+// When exiting this process, wait for Vercel Function server to finish
+// all its work, especially waitUntil promises before exiting this process.
+//
+// Here we use a short timeout (10 seconds) to let the user know that
+// it has a long-running waitUntil promise.
+const WAIT_UNTIL_TIMEOUT = 10;
+export const WAIT_UNTIL_TIMEOUT_MS = 10 * 1000;
+
+export const waitUntilWarning = (entrypointPath: string) =>
+  `
+The function \`${entrypointPath
+    .split('/')
+    .pop()}\` is still running after ${WAIT_UNTIL_TIMEOUT}s.
+(hint: do you have a long-running waitUntil() promise?)
+`.trim();
+
 export function getRegExpFromMatchers(matcherOrMatchers: unknown): string {
   if (!matcherOrMatchers) {
     return '^/.*$';
@@ -59,7 +75,12 @@ export function entrypointToOutputPath(
 }
 
 export function logError(error: Error) {
-  console.error(error.message);
+  let message = error.message;
+  if (!message.startsWith('Error:')) {
+    message = `Error: ${message}`;
+  }
+  console.error(message);
+
   if (error.stack) {
     // only show the stack trace if debug is enabled
     // because it points to internals, not user code
