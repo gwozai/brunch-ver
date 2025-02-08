@@ -1,10 +1,11 @@
 import type { BuilderFunctions } from '@vercel/build-utils';
 import type { Readable, Writable } from 'stream';
+import type * as tty from 'tty';
 import type { Route } from '@vercel/routing-utils';
 import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 
-export type ProjectEnvTarget = typeof PROJECT_ENV_TARGET[number];
-export type ProjectEnvType = 'plain' | 'secret' | 'encrypted' | 'system';
+export type ProjectEnvTarget = (typeof PROJECT_ENV_TARGET)[number];
+export type ProjectEnvType = 'plain' | 'encrypted' | 'system' | 'sensitive';
 
 export type ProjectSettings = import('@vercel/build-utils').ProjectSettings;
 
@@ -36,8 +37,11 @@ export interface GlobalConfig {
   '// Note'?: string;
   '// Docs'?: string;
   currentTeam?: string;
-  collectMetrics?: boolean;
   api?: string;
+
+  telemetry?: {
+    enabled?: boolean;
+  };
 
   // TODO: legacy - remove
   updateChannel?: string;
@@ -64,6 +68,8 @@ export type User = {
   billing: Billing;
   name?: string;
   limited?: boolean;
+  version?: 'northstar';
+  defaultTeamId?: string;
 };
 
 export interface Team {
@@ -130,6 +136,24 @@ type RouteOrMiddleware =
       middleware: 0;
     };
 
+export interface CustomEnvironment {
+  id: string;
+  slug: string;
+  type: CustomEnvironmentType;
+  description?: string;
+  branchMatcher?: CustomEnvironmentBranchMatcher;
+  createdAt: number;
+  updatedAt: number;
+  domains?: ProjectDomainFromApi[];
+}
+
+export interface CustomEnvironmentBranchMatcher {
+  type: 'startsWith' | 'equals' | 'endsWith';
+  pattern: string;
+}
+
+export type CustomEnvironmentType = 'production' | 'preview' | 'development';
+
 export type Deployment = {
   alias?: string[];
   aliasAssigned?: boolean | null | number;
@@ -152,11 +176,13 @@ export type Deployment = {
   createdAt: number;
   createdIn?: string;
   creator: { uid: string; username?: string };
+  customEnvironment?: CustomEnvironment;
   env?: string[];
   errorCode?: string;
   errorLink?: string;
   errorMessage?: string | null;
   errorStep?: string;
+  forced?: boolean;
   functions?: BuilderFunctions | null;
   gitSource?: {
     org?: string;
@@ -183,6 +209,8 @@ export type Deployment = {
   ownerId?: string;
   plan?: 'enterprise' | 'hobby' | 'oss' | 'pro';
   previewCommentsEnabled?: boolean;
+  private?: boolean;
+  proposedExpiration?: number;
   projectId?: string;
   projectSettings?: {
     buildCommand?: string | null;
@@ -218,6 +246,7 @@ export type Deployment = {
   };
   ttyBuildLogs?: boolean;
   type: 'LAMBDAS';
+  undeletedAt?: number;
   url: string;
   userAliases?: string[];
   version: 2;
@@ -293,17 +322,6 @@ export interface ProjectAliasTarget {
   deployment?: Deployment | undefined;
 }
 
-export interface Secret {
-  uid: string;
-  name: string;
-  value: string;
-  teamId?: string;
-  userId?: string;
-  projectId?: string;
-  created: string;
-  createdAt: number;
-}
-
 export interface ProjectEnvVariable {
   id: string;
   key: string;
@@ -313,6 +331,7 @@ export interface ProjectEnvVariable {
   createdAt?: number;
   updatedAt?: number;
   target?: ProjectEnvTarget | ProjectEnvTarget[];
+  customEnvironmentIds?: string[];
   system?: boolean;
   gitBranch?: string;
 }
@@ -351,9 +370,12 @@ export interface Project extends ProjectSettings {
   updatedAt: number;
   createdAt: number;
   link?: ProjectLinkData;
-  alias?: ProjectAliasTarget[];
   latestDeployments?: Partial<Deployment>[];
-  lastRollbackTarget: RollbackTarget | null;
+  lastAliasRequest?: LastAliasRequest | null;
+  targets?: {
+    production?: Deployment;
+  };
+  customEnvironments?: CustomEnvironment[];
 }
 
 export interface Org {
@@ -363,31 +385,77 @@ export interface Org {
 }
 
 export interface ProjectLink {
+  /**
+   * ID of the Vercel Project.
+   */
   projectId: string;
+  /**
+   * User or Team ID of the owner of the Vercel Project.
+   */
   orgId: string;
+  /**
+   * When linked as a repository, contains the absolute path
+   * to the root directory of the repository.
+   */
+  repoRoot?: string;
+  /**
+   * When linked as a repository, contains the relative path
+   * to the selected project root directory.
+   */
+  projectRootDirectory?: string;
 }
 
 export interface PaginationOptions {
-  prev: number;
+  /**
+   * Amount of items in the current page.
+   * @example 20
+   */
   count: number;
-  next?: number;
+  /**
+   * Timestamp that must be used to request the next page.
+   * @example 1540095775951
+   */
+  next: number | null;
+  /**
+   * Timestamp that must be used to request the previous page.
+   * @example 1540095775951
+   */
+  prev: number | null;
 }
 
-export type ProjectLinkResult =
-  | { status: 'linked'; org: Org; project: Project }
-  | { status: 'not_linked'; org: null; project: null }
-  | {
-      status: 'error';
-      exitCode: number;
-      reason?:
-        | 'HEADLESS'
-        | 'NOT_AUTHORIZED'
-        | 'TEAM_DELETED'
-        | 'PATH_IS_FILE'
-        | 'INVALID_ROOT_DIRECTORY'
-        | 'MISSING_PROJECT_SETTINGS';
-    };
+export type ProjectLinked = {
+  status: 'linked';
+  org: Org;
+  project: Project;
+  repoRoot?: string;
+};
 
+export type ProjectNotLinked = {
+  status: 'not_linked';
+  org: null;
+  project: null;
+};
+
+export type ProjectLinkedError = {
+  status: 'error';
+  exitCode: number;
+  reason?:
+    | 'HEADLESS'
+    | 'NOT_AUTHORIZED'
+    | 'TEAM_DELETED'
+    | 'PATH_IS_FILE'
+    | 'INVALID_ROOT_DIRECTORY'
+    | 'TOO_MANY_PROJECTS';
+};
+
+export type ProjectLinkResult =
+  | ProjectLinked
+  | ProjectNotLinked
+  | ProjectLinkedError;
+
+/**
+ * @deprecated - `RollbackJobStatus` has been replace by `LastAliasRequest['jobStatus']`.
+ */
 export type RollbackJobStatus =
   | 'pending'
   | 'in-progress'
@@ -395,11 +463,23 @@ export type RollbackJobStatus =
   | 'failed'
   | 'skipped';
 
+/**
+ * @deprecated - `RollbackTarget` has been renamed to `LastAliasRequest` so it can
+ * be shared with "promote".
+ */
 export interface RollbackTarget {
   fromDeploymentId: string;
   jobStatus: RollbackJobStatus;
   requestedAt: number;
   toDeploymentId: string;
+}
+
+export interface LastAliasRequest {
+  fromDeploymentId: string;
+  jobStatus: 'pending' | 'in-progress' | 'succeeded' | 'failed' | 'skipped';
+  requestedAt: number;
+  toDeploymentId: string;
+  type: 'rollback' | 'promote';
 }
 
 export interface Token {
@@ -571,6 +651,6 @@ export interface WritableTTY extends Writable {
 
 export interface Stdio {
   stdin: ReadableTTY;
-  stdout: WritableTTY;
-  stderr: WritableTTY;
+  stdout: tty.WriteStream;
+  stderr: tty.WriteStream;
 }

@@ -3,9 +3,6 @@
     "build": "next build",
     "now-build": "next build"
   },
-  "engines": {
-    "node": "16.x"
-  },
   "dependencies": {
     "next": "10.0.8",
     "react": "latest",
@@ -13,5 +10,6 @@
   },
   "resolutions": {
     "@babel/compat-data": "7.21.4"
-  }
+  },
+  "ignoreNextjsUpdates": true
 }
