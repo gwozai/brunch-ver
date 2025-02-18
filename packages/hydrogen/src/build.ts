@@ -51,13 +51,20 @@ export const build: BuildV2 = async ({
   );
 
   const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  const { cliType, lockfileVersion } = await scanParentDirs(entrypointDir);
+  const {
+    cliType,
+    lockfileVersion,
+    packageJsonPackageManager,
+    turboSupportsCorepackHome,
+  } = await scanParentDirs(entrypointDir, true);
 
   spawnOpts.env = getEnvForPackageManager({
     cliType,
     lockfileVersion,
+    packageJsonPackageManager,
     nodeVersion,
     env: spawnOpts.env || {},
+    turboSupportsCorepackHome,
   });
 
   if (typeof installCommand === 'string') {
@@ -126,7 +133,6 @@ export const build: BuildV2 = async ({
   ]);
 
   const edgeFunction = new EdgeFunction({
-    name: 'hydrogen',
     deploymentTarget: 'v8-worker',
     entrypoint: 'index.js',
     files: edgeFunctionFiles,

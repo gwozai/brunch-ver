@@ -55,7 +55,7 @@ export const hasSchema = {
  */
 export const routesSchema = {
   type: 'array',
-  maxItems: 1024,
+  maxItems: 2048,
   deprecated: true,
   description:
     'A list of routes objects used to rewrite paths to point towards other internal or external paths',
@@ -186,7 +186,7 @@ export const routesSchema = {
 
 export const rewritesSchema = {
   type: 'array',
-  maxItems: 1024,
+  maxItems: 2048,
   description: 'A list of rewrite definitions.',
   items: {
     type: 'object',
@@ -207,6 +207,13 @@ export const rewritesSchema = {
       },
       has: hasSchema,
       missing: hasSchema,
+      statusCode: {
+        description:
+          'An optional integer to override the status code of the response.',
+        type: 'integer',
+        minimum: 100,
+        maximum: 999,
+      },
     },
   },
 } as const;
@@ -214,7 +221,7 @@ export const rewritesSchema = {
 export const redirectsSchema = {
   title: 'Redirects',
   type: 'array',
-  maxItems: 1024,
+  maxItems: 2048,
   description: 'A list of redirect definitions.',
   items: {
     type: 'object',
@@ -239,6 +246,8 @@ export const redirectsSchema = {
         type: 'boolean',
       },
       statusCode: {
+        description:
+          'An optional integer to define the status code of the redirect.',
         private: true,
         type: 'integer',
         minimum: 100,
@@ -252,7 +261,7 @@ export const redirectsSchema = {
 
 export const headersSchema = {
   type: 'array',
-  maxItems: 1024,
+  maxItems: 2048,
   description: 'A list of header definitions.',
   items: {
     type: 'object',

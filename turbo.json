@@ -1,11 +1,32 @@
 {
   "$schema": "https://turborepo.org/schema.json",
-  "globalDependencies": ["turbo-cache-key.json", "test/lib/**"],
+  "globalDependencies": [
+    "turbo-cache-key.json",
+    "package.json",
+    "test/lib/**",
+    "utils/build.mjs"
+  ],
   "pipeline": {
     "build": {
       "dependsOn": ["^build"],
       "outputMode": "new-only",
       "outputs": ["dist/**"]
+    },
+    "vitest-unit": {
+      "dependsOn": ["build"],
+      "outputMode": "new-only"
+    },
+    "vitest-run": {
+      "dependsOn": ["build"],
+      "outputMode": "new-only"
+    },
+    "vitest-e2e": {
+      "dependsOn": ["build"],
+      "outputMode": "new-only"
+    },
+    "vitest-e2e-node-20": {
+      "dependsOn": ["build"],
+      "outputMode": "new-only"
     },
     "test-unit": {
       "dependsOn": ["build"],
@@ -30,6 +51,7 @@
     "test": {
       "dependsOn": ["build"],
       "outputMode": "new-only"
-    }
+    },
+    "type-check": {}
   }
 }

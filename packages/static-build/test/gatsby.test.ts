@@ -322,16 +322,20 @@ describe('gatsby utilities', () => {
 
       await createPluginSymlinks(fixture);
 
-      const analytics = require(path.join(
-        fixture,
-        'node_modules/@vercel/gatsby-plugin-vercel-analytics'
-      ));
+      const analytics = require(
+        path.join(
+          fixture,
+          'node_modules/@vercel/gatsby-plugin-vercel-analytics'
+        )
+      );
       expect(typeof analytics).toEqual('object');
 
-      const builder = require(path.join(
-        fixture,
-        'node_modules/@vercel/gatsby-plugin-vercel-builder/gatsby-node.js'
-      ));
+      const builder = require(
+        path.join(
+          fixture,
+          'node_modules/@vercel/gatsby-plugin-vercel-builder/gatsby-node.js'
+        )
+      );
       expect(typeof builder.onPostBuild).toEqual('function');
     });
   });
@@ -359,7 +363,7 @@ describe('gatsby utilities', () => {
       );
 
       expect((await fs.readdir(dir)).length).toBe(6);
-      await cleanupGatsbyFiles(dir);
+      cleanupGatsbyFiles(dir);
       expect((await fs.readdir(dir)).length).toBe(0);
     });
   });
@@ -393,7 +397,7 @@ describe('gatsby utilities', () => {
     );
 
     expect((await fs.readdir(dir)).length).toBe(12);
-    await cleanupGatsbyFiles(dir);
+    cleanupGatsbyFiles(dir);
     const afterDelete = await fs.readdir(dir);
     expect(afterDelete.length).toBe(6);
     expect(afterDelete.sort()).toEqual(files.sort());

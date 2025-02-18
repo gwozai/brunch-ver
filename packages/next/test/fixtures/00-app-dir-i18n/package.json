@@ -6,8 +6,8 @@
     "start": "next start"
   },
   "dependencies": {
-    "next": "canary",
-    "react": "experimental",
-    "react-dom": "experimental"
+    "next": "15.2.0-canary.33",
+    "react": "latest",
+    "react-dom": "latest"
   }
 }
